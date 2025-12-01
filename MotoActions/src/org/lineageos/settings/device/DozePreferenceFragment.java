@@ -9,24 +9,18 @@ package org.lineageos.settings.device;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.PreferenceFragment;
+import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.settingslib.widget.MainSwitchPreference;
 
-public class DozePreferenceFragment extends PreferenceFragment
-        implements Preference.OnPreferenceChangeListener, OnCheckedChangeListener {
-
-    private MainSwitchPreference mSwitchBar;
+public class DozePreferenceFragment extends PreferenceFragmentCompat
+        implements Preference.OnPreferenceChangeListener {
 
     private SwitchPreferenceCompat mAlwaysOnDisplayPreference;
 
@@ -36,7 +30,7 @@ public class DozePreferenceFragment extends PreferenceFragment
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-        addPreferencesFromResource(R.xml.doze_panel);
+        setPreferencesFromResource(R.xml.doze_panel, rootKey);
 
         SharedPreferences prefs =
                 getActivity().getSharedPreferences("doze_panel", Activity.MODE_PRIVATE);
@@ -46,9 +40,9 @@ public class DozePreferenceFragment extends PreferenceFragment
 
         boolean dozeEnabled = MotoActionsSettings.isDozeEnabled(getActivity());
 
-        mSwitchBar = (MainSwitchPreference) findPreference(MotoActionsSettings.DOZE_ENABLE);
-        mSwitchBar.addOnSwitchChangeListener(this);
-        mSwitchBar.setChecked(dozeEnabled);
+        MainSwitchPreference switchBar = findPreference(MotoActionsSettings.DOZE_ENABLE);
+        switchBar.setOnPreferenceChangeListener(this);
+        switchBar.setChecked(dozeEnabled);
 
         mAlwaysOnDisplayPreference = findPreference(MotoActionsSettings.ALWAYS_ON_DISPLAY);
         mAlwaysOnDisplayPreference.setEnabled(dozeEnabled);
@@ -78,52 +72,40 @@ public class DozePreferenceFragment extends PreferenceFragment
 
     @Override
     public boolean onPreferenceChange(Preference preference, Object newValue) {
+        boolean isChecked = (Boolean) newValue;
         if (MotoActionsSettings.ALWAYS_ON_DISPLAY.equals(preference.getKey())) {
-            MotoActionsSettings.enableAlwaysOn(getActivity(), (Boolean) newValue);
+            MotoActionsSettings.enableAlwaysOn(getActivity(), isChecked);
+        } else if (MotoActionsSettings.DOZE_ENABLE.equals(preference.getKey())) {
+            MotoActionsSettings.enableDoze(getActivity(), isChecked);
+
+            if (!isChecked) {
+                MotoActionsSettings.enableAlwaysOn(getActivity(), false);
+                mAlwaysOnDisplayPreference.setChecked(false);
+            }
+            mAlwaysOnDisplayPreference.setEnabled(isChecked);
+
+            mHandwavePreference.setEnabled(isChecked);
+            mPickUpPreference.setEnabled(isChecked);
+            mPocketPreference.setEnabled(isChecked);
         }
 
         return true;
     }
 
-    @Override
-    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        MotoActionsSettings.enableDoze(getActivity(), isChecked);
-
-        mSwitchBar.setChecked(isChecked);
-
-        if (!isChecked) {
-            MotoActionsSettings.enableAlwaysOn(getActivity(), false);
-            mAlwaysOnDisplayPreference.setChecked(false);
-        }
-        mAlwaysOnDisplayPreference.setEnabled(isChecked);
-
-        mHandwavePreference.setEnabled(isChecked);
-        mPickUpPreference.setEnabled(isChecked);
-        mPocketPreference.setEnabled(isChecked);
-    }
-
-    public static class HelpDialogFragment extends DialogFragment {
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            return new AlertDialog.Builder(getActivity())
-                    .setTitle(R.string.doze_settings_help_title)
-                    .setMessage(R.string.doze_settings_help_text)
-                    .setNegativeButton(R.string.dialog_ok, (dialog, which) -> dialog.cancel())
-                    .create();
-        }
-
-        @Override
-        public void onCancel(DialogInterface dialog) {
-            getActivity()
-                    .getSharedPreferences("doze_panel", Activity.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean("first_help_shown", true)
-                    .apply();
-        }
-    }
-
     private void showHelp() {
-        HelpDialogFragment fragment = new HelpDialogFragment();
-        fragment.show(getFragmentManager(), "help_dialog");
+        AlertDialog helpDialog = new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.doze_settings_help_title)
+                .setMessage(R.string.doze_settings_help_text)
+                .setPositiveButton(R.string.dialog_ok,
+                        (dialog, which) -> {
+                            getActivity()
+                                    .getSharedPreferences("doze_panel", Activity.MODE_PRIVATE)
+                                    .edit()
+                                    .putBoolean("first_help_shown", true)
+                                    .commit();
+                            dialog.cancel();
+                        })
+                .create();
+        helpDialog.show();
     }
 }
