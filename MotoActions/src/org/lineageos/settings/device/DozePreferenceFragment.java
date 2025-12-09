@@ -6,12 +6,11 @@
 
 package org.lineageos.settings.device;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -33,7 +32,7 @@ public class DozePreferenceFragment extends PreferenceFragmentCompat
         setPreferencesFromResource(R.xml.doze_panel, rootKey);
 
         SharedPreferences prefs =
-                getActivity().getSharedPreferences("doze_panel", Activity.MODE_PRIVATE);
+                getActivity().getSharedPreferences("doze_panel", Context.MODE_PRIVATE);
         if (savedInstanceState == null && !prefs.getBoolean("first_help_shown", false)) {
             showHelp();
         }
@@ -99,7 +98,7 @@ public class DozePreferenceFragment extends PreferenceFragmentCompat
                 .setPositiveButton(R.string.dialog_ok,
                         (dialog, which) -> {
                             getActivity()
-                                    .getSharedPreferences("doze_panel", Activity.MODE_PRIVATE)
+                                    .getSharedPreferences("doze_panel", Context.MODE_PRIVATE)
                                     .edit()
                                     .putBoolean("first_help_shown", true)
                                     .commit();
